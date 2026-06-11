@@ -9,8 +9,8 @@ class TrackerGUI:
         
         # Display Menu
         self.root = tk.Tk()
-        self.root.title("-~-~-~-  Souls Death Tracker -~-~--~-")
-        self.root.geometry("500x400")
+        self.root.title("Souls Death Tracker")
+        self.root.geometry("700x600")
 
         # Tracker ref
         self.tracker = None
@@ -24,7 +24,7 @@ class TrackerGUI:
         #--------------------#
         title = tk.Label(
             self.root,
-            text="Souls Death Tracker",
+            text="-~-~-~-  Souls Death Tracker -~-~--~-",
             font=("Adobe Garamond", 16, "bold")
         )
         title.pack(pady=10)
@@ -59,7 +59,7 @@ class TrackerGUI:
         #--------------------#
         #   Selected Label   #
         #--------------------#
-        self.selected_label = tl.Label(
+        self.selected_label = tk.Label(
             self.root,
             text="Selected: None",
             font=("Adobe Garamond", 12)
@@ -97,6 +97,7 @@ class TrackerGUI:
             width=15
         )
         stop_btn.pack(side="left", padx=5)
+
 
     #--------------------#
     #   Game Selection   #
@@ -155,6 +156,16 @@ class TrackerGUI:
         self.death_label.config(
             text=f"Runtime Deaths: {count}"
         )
+
+
+    #--------------------#
+    #   Update Death     #
+    #--------------------#
+    def update_death_count(self, count):
+        self.death_label.config(
+            text=f"Runtime Deaths: {count}"
+        )
+
 
     #--------------------#
     #      Run GUI       #

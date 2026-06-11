@@ -1,5 +1,9 @@
 from gui import TrackerGUI
 
-if __name__ == "__main":
+def main():
     app = TrackerGUI()
     app.run()
+
+
+if __name__ == "__main__":
+    main()
