@@ -1,5 +1,6 @@
 from gui import TrackerGUI
 
+
 def main():
     app = TrackerGUI()
     app.run()
