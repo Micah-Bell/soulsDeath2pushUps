@@ -1,6 +1,6 @@
 # Threads for watcher to work in background
 import threading
-
+import time
 from death_detector import DeathDetector
 from excel_manager import ExcelManager
 
@@ -54,8 +54,6 @@ class DeathTracker:
         """Loops for Death Checks"""
 
         while self.running:
-            
-            # Example placeholder logic
             if self.detector.detect_death():
 
                 self.death_count += 1
@@ -70,3 +68,4 @@ class DeathTracker:
                     0,
                     lambda: self.update_death_count(self.death_count)
                 )
+        time.sleep(4)

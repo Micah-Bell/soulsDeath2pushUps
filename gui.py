@@ -1,5 +1,5 @@
-import tkinter as tk
-import psutil
+import tkinter as tk # gui
+import psutil # process and system utilites
 import time
 import threading
 
