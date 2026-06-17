@@ -23,6 +23,7 @@ class DeathDetector:
         image = self.sct.grab(self.get_region())
         return self.check_death(image)
 
+
     #------------------------#
     #   Fullscreen -> Box    #
     #------------------------#
@@ -38,6 +39,7 @@ class DeathDetector:
         }
         return region
     
+
     #------------------------#
     # Check Image for Death  #
     #------------------------#
@@ -61,6 +63,7 @@ class DeathDetector:
                 if self.trigger.lower() in detected_text.lower():
                     text_detected_frame = True
                     break
+
 
         #-----------------------#
         #  State Machine Logic  #
