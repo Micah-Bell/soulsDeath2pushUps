@@ -3,10 +3,12 @@ from excel_manager import ExcelManager
 from gui import TrackerGUI
 from death_tracker import DeathTracker
 import psutil
+import time
+import threading
 
 
 def Main():
-    
+
     monitor = GameMonitor()
     excel = ExcelManager("souls_death_workout.xlsx")
 
@@ -30,7 +32,6 @@ def Main():
 
         # Create only when actually needed
         gui = TrackerGUI()
-        print("D")
 
         tracker = DeathTracker(
             game=game,
@@ -40,13 +41,15 @@ def Main():
         tracker.start()
 
         gui.run()
-        print("E")
 
         tracker.stop()
+        time.sleep(0.2)
+
+        final_deaths = tracker.death_count
 
         excel.record_session(
             game,
-            death_num=tracker.death_count
+            final_deaths
         )
 
 

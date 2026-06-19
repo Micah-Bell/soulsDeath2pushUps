@@ -11,7 +11,8 @@ class DeathDetector:
 
         self.ocr = PaddleOCR(
             use_angle_cls=False, 
-            lang="en", 
+            lang="en",
+            show_log=False 
         )
         self.trigger = "YOU DIED"
         self.primary = self.sct.monitors[2]
@@ -54,7 +55,7 @@ class DeathDetector:
         image_np = np.array(image)
         image_bgr = cv2.cvtColor(image_np, cv2.COLOR_BGRA2BGR)
 
-        result = self.ocr.predict(image_bgr, cls=False)
+        result = self.ocr.ocr(image_bgr, cls=False)
         text_detected_frame = False
 
         # Run through photo

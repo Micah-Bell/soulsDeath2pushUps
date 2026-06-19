@@ -45,6 +45,7 @@ class DeathTracker:
         """Stop Monitoring"""
 
         self.running = False
+        time.sleep(0.1)
 
 
     #-------------------------#

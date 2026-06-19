@@ -3,18 +3,25 @@ import psutil # process and system utilites
 import time
 import threading
 
-from death_tracker import DeathTracker
-
 
 class TrackerGUI:
 
     def __init__(self):
         """Create GUI Menu"""
+
+        # State Data
+        self.session_deaths = 0
+        self.current_game = None
+
+        # Colors
+        self.bg_color = "#27170d"
+        self.fg_color = "#bd6707"
         
         # Display Menu
         self.root = tk.Tk()
         self.root.title("Souls Death Tracker")
         self.root.geometry("600x200")
+        self.root.configure(bg=self.bg_color)
 
         # Clean Up
         self.root.protocol(
@@ -22,44 +29,27 @@ class TrackerGUI:
             self.on_close
         )
 
-        # Tracker ref
-        self.tracker = None
-
-        # State
-        self.selected_game = None
-        self.game_buttons = {}
-
         #--------------------#
-        #       Title        #
+        #    Title Label     #
         #--------------------#
         title = tk.Label(
             self.root,
             text="-~-~-~-  Souls Death Tracker -~-~--~-",
-            font=("Adobe Garamond", 24, "bold")
+            font=("Adobe Garamond", 24, "bold"),
+            bg=self.bg_color,
+            fg=self.fg_color
         )
         title.pack(pady=10)
 
         #--------------------#
-        #       Games        #
-        #--------------------#
-        games = [
-            "Demon's Souls",
-            "Nightreign",
-            "Dark Souls",
-            "Dark Souls II",
-            "Dark Souls III",
-            "Bloodborne",
-            "Sekiro",
-            "Elden Ring"
-        ]
-
-        #--------------------#
-        #   Selected Label   #
+        #    Status Label    #
         #--------------------#
         self.selected_label = tk.Label(
             self.root,
             text="Searching for Souls Game...",
-            font=("Adobe Garamond", 16)
+            font=("Adobe Garamond", 16),
+            bg=self.bg_color,
+            fg=self.fg_color
         )
         self.selected_label.pack(pady=10)
 
@@ -69,26 +59,28 @@ class TrackerGUI:
         self.death_label = tk.Label(
             self.root,
             text="Runtime Deaths: 0",
-            font=("Adobe Garamond", 18)
+            font=("Adobe Garamond", 18),
+            bg=self.bg_color,
+            fg=self.fg_color
         )
         self.death_label.pack(pady=10)
 
+        # Tracker Ref
+        self.tracker = None
 
     #--------------------#
     #   Start Tracking   #
     #--------------------#
     def start_tracking(self):
-        
+        from death_tracker import DeathTracker
+
         self.tracker = DeathTracker(
-            game=self.selected_game,
+            game=self.current_game,
             gui=self
         )
 
         self.tracker.start()
-
-        self.selected_label.config(
-            text=f"Tracking: {self.selected_game}"
-        )
+        self.update_ui()
 
 
     #--------------------#
@@ -100,15 +92,25 @@ class TrackerGUI:
             self.tracker.stop()
             self.tracker = None
 
-            # Raise all game buttons back up
-            # for btn in self.game_buttons.values():
-            #     btn.config(relief="raised")
+            self.current_game = None
+            self.session_deaths = 0
+            self.update_ui()
 
-            # Clear the selected game
-            self.selected_game = None
 
-        self.selected_label.config(
-            text="Searching for Souls Game..."
+    #--------------------#
+    #     Update GUI     #
+    #--------------------#
+    def update_ui(self):
+
+        if self.current_game:
+            status = f"Tracking: {self.current_game}"
+        else:
+            status = "Searching for Souls Game..."
+
+        self.selected_label.config(text=status)
+
+        self.death_label.config(
+            text=f"Session Deaths: {self.session_deaths}"
         )
 
 
@@ -116,9 +118,10 @@ class TrackerGUI:
     #   Runtime Deaths   #
     #--------------------#
     def update_death_count(self, count):
-        self.death_label.config(
-            text=f"Runtime Deaths: {count}"
-        )
+
+        self.session_deaths = count
+        self.root.after(0, self.update_ui)
+
 
     #--------------------#
     #   Close Clean Up   #
