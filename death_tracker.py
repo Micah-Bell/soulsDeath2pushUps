@@ -11,6 +11,7 @@ class DeathTracker:
         self.game = game
         self.gui = gui
 
+        self.TRACKGUI = TrackerGUI()
         self.detector = DeathDetector()
         self.excel = ExcelManager("souls_death_workout.xlsx")
 
@@ -58,14 +59,10 @@ class DeathTracker:
 
                 self.death_count += 1
 
-                self.excel.add_death(
-                    game=self.game,
-                    death_num=self.death_count
-                )
-
                 # Update GUI Safely
                 self.gui.root.after(
                     0,
-                    lambda: self.update_death_count(self.death_count)
+                    self.gui.update_death_count(self.death_count)
                 )
-        time.sleep(4)
+
+            time.sleep(3)

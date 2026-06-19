@@ -8,7 +8,11 @@ class DeathDetector:
         
     def __init__(self):
         self.sct = mss.mss()
-        self.ocr = PaddleOCR(use_angle_cls=False, lang="en", show_log=False)
+
+        self.ocr = PaddleOCR(
+            use_angle_cls=False, 
+            lang="en", 
+        )
         self.trigger = "YOU DIED"
         self.primary = self.sct.monitors[2]
         self.already_dead = False # Helps get rid of double counts
@@ -45,8 +49,6 @@ class DeathDetector:
     #------------------------#
     def check_death(self, image):
         """Use OCR to read text"""
-
-        is_dead = False
 
         # Gets photo "prepped"
         image_np = np.array(image)
