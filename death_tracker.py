@@ -11,7 +11,6 @@ class DeathTracker:
         self.game = game
         self.gui = gui
 
-        self.TRACKGUI = TrackerGUI()
         self.detector = DeathDetector()
         self.excel = ExcelManager("souls_death_workout.xlsx")
 
@@ -53,6 +52,8 @@ class DeathTracker:
     #-------------------------#
     def monitor_screen(self):
         """Loops for Death Checks"""
+
+        print("tracker thread started") # DEBUG
 
         while self.running:
             if self.detector.detect_death():

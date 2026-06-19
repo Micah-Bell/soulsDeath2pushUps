@@ -1,7 +1,3 @@
-import os
-os.environ["FLAGS_use_mlkdnn"] = "0"
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-
 from game_monitor import GameMonitor
 from excel_manager import ExcelManager
 from gui import TrackerGUI
@@ -10,6 +6,7 @@ import psutil
 
 
 def Main():
+    
     monitor = GameMonitor()
     excel = ExcelManager("souls_death_workout.xlsx")
 
@@ -33,6 +30,7 @@ def Main():
 
         # Create only when actually needed
         gui = TrackerGUI()
+        print("D")
 
         tracker = DeathTracker(
             game=game,
@@ -42,6 +40,7 @@ def Main():
         tracker.start()
 
         gui.run()
+        print("E")
 
         tracker.stop()
 
@@ -51,5 +50,5 @@ def Main():
         )
 
 
-if __name__ == "__Main__":
+if __name__ == "__main__":
     Main()
