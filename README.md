@@ -1,10 +1,11 @@
 TODO:
 
-Change GUI to not select game so that it automatically does it by the program starting when the game starts
-*** GET PROGRAM WORKING FIRST BEFORE MORE FINE DETAILS ***
+***Get GUI to auto select game and show it and go back and forth between games ***
 
-Figure out runtime deaths to gui safely in death_tracker
+Test Runtime deaths
 
-Make seperate class for background running for both checking for game to run gui AND TO CLOSE GAME IF PUSHUPS STILL NEEDED
+Test game_monitor.py
 
-Add Nightreign
+*** Make it so that after a session is over have an end results screen and a continue button that goes to a waiting screen for next game ***
+
+Lastly after all code is ready, make it so that it starts up with windows start so i dont need vs code

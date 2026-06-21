@@ -62,9 +62,6 @@ class DeathTracker:
                 self.death_count += 1
 
                 # Update GUI Safely
-                self.gui.root.after(
-                    0,
-                    self.gui.update_death_count(self.death_count)
-                )
+                self.gui.update_death_count(self.death_count)
 
             time.sleep(3)

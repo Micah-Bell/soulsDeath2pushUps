@@ -92,7 +92,7 @@ class TrackerGUI:
             self.tracker.stop()
             self.tracker = None
 
-            self.current_game = None
+            self.current_game = None # change to "" to see if it fixes later problems
             self.session_deaths = 0
             self.update_ui()
 

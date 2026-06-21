@@ -32,6 +32,8 @@ def Main():
 
         # Create only when actually needed
         gui = TrackerGUI()
+        gui.current_game = game
+        # gui.update_ui()
 
         tracker = DeathTracker(
             game=game,
