@@ -27,18 +27,18 @@ def Main():
                 f"You owe {pushups} pushups before getting more!"
             )
 
-            monitor.close_game(game)
+            monitor.close_game(process)
             continue
 
         # Create only when actually needed
         gui = TrackerGUI()
         gui.current_game = game
-        # gui.update_ui()
 
         tracker = DeathTracker(
             game=game,
             gui=gui
         )
+        gui.tracker = tracker
 
         tracker.start()
 

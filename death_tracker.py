@@ -49,7 +49,7 @@ class DeathTracker:
 
 
     #-------------------------#
-    #  Main Loop (bkgnd thrd) #
+    #     Monitor Screen      #
     #-------------------------#
     def monitor_screen(self):
         """Loops for Death Checks"""
@@ -60,8 +60,9 @@ class DeathTracker:
             if self.detector.detect_death():
 
                 self.death_count += 1
+                print(f"Death detected! Total: {self.death_count}") # DEBUG
 
                 # Update GUI Safely
                 self.gui.update_death_count(self.death_count)
 
-            time.sleep(3)
+            time.sleep(1)

@@ -42,7 +42,7 @@ class ExcelManager:
             column=target_col
         ).value = deaths
 
-        self.save
+        self.save()
 
 
     #------------------------#

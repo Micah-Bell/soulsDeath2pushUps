@@ -18,13 +18,11 @@ class GameMonitor:
     def wait_for_launch(self):
         
         while True:
-
             for proc in psutil.process_iter(['name']):
-
                 try: 
                     name = proc.info["name"]
                     if name in self.game_list:
-                        return (
+                        return(
                             self.game_list[name],
                             proc
                         )

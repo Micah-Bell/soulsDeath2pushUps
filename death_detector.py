@@ -15,7 +15,7 @@ class DeathDetector:
             show_log=False 
         )
         self.trigger = "YOU DIED"
-        self.primary = self.sct.monitors[2]
+        self.primary = self.sct.monitors[1]
         self.already_dead = False # Helps get rid of double counts
 
 

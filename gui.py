@@ -14,13 +14,13 @@ class TrackerGUI:
         self.current_game = None
 
         # Colors
-        self.bg_color = "#27170d"
-        self.fg_color = "#bd6707"
+        self.bg_color = "#1a0f08"
+        self.fg_color = "#9b5a0f"
         
         # Display Menu
         self.root = tk.Tk()
         self.root.title("Souls Death Tracker")
-        self.root.geometry("600x200")
+        self.root.geometry("600x250")
         self.root.configure(bg=self.bg_color)
 
         # Clean Up
@@ -67,6 +67,7 @@ class TrackerGUI:
 
         # Tracker Ref
         self.tracker = None
+
 
     #--------------------#
     #   Start Tracking   #
@@ -138,4 +139,5 @@ class TrackerGUI:
     #      Run GUI       #
     #--------------------#
     def run(self):
+        self.root.after(0, self.update_ui)
         self.root.mainloop()
