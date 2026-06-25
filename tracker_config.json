@@ -1,0 +1,7 @@
+{
+  "save_path": "souls_deaths.xlsx",
+  "template_path": "C:/Users/mjbel/Documents/Projects/CS_Proj/soulsDeath2pushUps/test idea/you_died.png",
+  "detect_interval": 3,
+  "death_cooldown": 5,
+  "confidence": 0.75
+}
