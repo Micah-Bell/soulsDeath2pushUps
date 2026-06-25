@@ -37,6 +37,7 @@ import os                                  # file path checks
 import json                                # saving/loading config
 import threading                           # run detectors without freezing the GUI
 import time                                # sleep between polls
+import keyboard                            # keyboard for hotkeys
 
 # ── Third-party ──────────────────────────────────────────────
 import openpyxl                            # read/write .xlsx files
@@ -45,6 +46,17 @@ from openpyxl.styles import (              # Excel cell styling
 )
 from openpyxl.utils import get_column_letter  # converts col number → letter (e.g. 3 → "C")
 from datetime import datetime              # timestamps for each death
+
+
+# ═══════════════════════════════════════════════════════════════
+#  PUNISHMENT RATES
+#  How many reps of each exercise are owed per death.
+#  Change these numbers here and the whole spreadsheet updates.
+#  Pull-ups are hardest so fewest reps; squats are easiest so most.
+# ═══════════════════════════════════════════════════════════════
+PUSHUPS_PER_DEATH = 5
+PULLUPS_PER_DEATH = 3
+SQUATS_PER_DEATH  = 10
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -136,12 +148,16 @@ TS_FMT     = "YYYY-MM-DD HH:MM:SS"   # Excel number format string for timestamps
 class ExcelManager:
 
     # ── Colour palette (hex, no '#') ─────────────────────────
-    HDR_BG = "1A1A2E"   # dark navy — header row background
-    ALT_BG = "13519E"   # slightly lighter navy — alternating row tint
-    ACCENT = "C84B31"   # blood red — death count highlight + borders
-    TEXT   = "E0E0E038" # grey — regular cell text
-    DIM    = "666666"   # mid grey — de-emphasised text (timestamps)
-    GAP_BG = "080808"   # near-black — the divider column
+    HDR_BG    = "1A1A2E"   # dark navy header
+    ALT_BG    = "0F3460"   # alternating row tint
+    ACCENT    = "C84B31"   # blood red — deaths
+    PUSH_CLR  = "E8A838"   # amber  — pushups
+    PULL_CLR  = "3A86FF"   # blue   — pullups
+    SQUAT_CLR = "2EC4B6"   # teal   — squats
+    TEXT      = "E0E0E0"
+    DIM       = "666666"
+    GAP_BG    = "080808"
+    DARK      = "0D0D0D"
 
     def __init__(self, path):
         self.path = path
@@ -179,16 +195,19 @@ class ExcelManager:
         so it stays visible when you scroll down through hundreds of deaths.
         """
         # Set each column's width in characters. Column 4 (the gap) is narrow on purpose.
-        widths = {1: 10, 2: 24, 3: 22, 4: 3, 5: 10, 6: 24, 7: 10, 8: 22, 9: 22}
+        widths = {1: 10, 2: 24, 3: 22, 4: 3, 5: 10, 6: 22, 7: 10, 8: 22, 9: 22, 10: 12, 11: 12, 12: 12}
         for col, w in widths.items():
             ws.column_dimensions[get_column_letter(col)].width = w
 
+        # Write the header row with both tables' labels
+        self._write_header_row(ws)
+
         # Write both header sections in one call
-        self._write_section_header(
-            ws, row=1,
-            left_labels=["Session", "Game", "Death Time"],
-            right_labels=["Session", "Game", "Deaths", "Start Time", "End Time"]
-        )
+        # self._write_section_header(
+        #     ws, row=1,
+        #     left_labels=["Session", "Game", "Death Time"],
+        #     right_labels=["Session", "Game", "Deaths", "Start Time", "End Time"]
+        # )
 
         ws.row_dimensions[1].height = 22  # slightly taller header row
 
@@ -198,36 +217,53 @@ class ExcelManager:
         # Make the gap column header match the gap background
         ws.cell(1, GAP_COL).fill = PatternFill("solid", fgColor=self.GAP_BG)
 
-    def _write_section_header(self, ws, row, left_labels, right_labels):
+    def _write_header_row(self, ws):
         """
-        Write styled header cells for both the left and right tables.
-        The gap column (D) gets a different fill so it looks like a divider.
+        Write the header row. The right table now has 8 columns instead of 5.
+        Punishment column headers get their own accent colours so it's immediately
+        obvious which column is which exercise at a glance.
         """
         hdr_fill   = PatternFill("solid", fgColor=self.HDR_BG)
         hdr_font   = Font(bold=True, color="FFFFFF", size=10)
-        # A red bottom border gives the header a visual "separator" feel
         hdr_border = Border(bottom=Side(style="medium", color=self.ACCENT))
-
-        # Write left table headers (columns 1, 2, 3)
-        for col_idx, label in zip([1, 2, 3], left_labels):
-            c = ws.cell(row, col_idx)
+ 
+        # Left table headers (cols 1–3)
+        for col, label in zip([1, 2, 3], ["Session", "Game", "Death Time"]):
+            c            = ws.cell(1, col)
+            c.value      = label
+            c.fill       = hdr_fill
+            c.font       = hdr_font
+            c.alignment  = Alignment(horizontal="center", vertical="center")
+            c.border     = hdr_border
+ 
+        # Gap column — dark, no text
+        ws.cell(1, GAP_COL).fill = PatternFill("solid", fgColor=self.GAP_BG)
+ 
+        # Right table base headers (cols 5–9) — same as before
+        base_labels = ["Session", "Game", "Deaths", "Start Time", "End Time"]
+        for col, label in zip([5, 6, 7, 8, 9], base_labels):
+            c           = ws.cell(1, col)
             c.value     = label
             c.fill      = hdr_fill
             c.font      = hdr_font
             c.alignment = Alignment(horizontal="center", vertical="center")
             c.border    = hdr_border
-
-        # The gap column gets only a background, no text
-        ws.cell(row, GAP_COL).fill = PatternFill("solid", fgColor=self.GAP_BG)
-
-        # Write right table headers (columns 5, 6, 7, 8, 9)
-        for col_idx, label in zip([5, 6, 7, 8, 9], right_labels):
-            c = ws.cell(row, col_idx)
+ 
+        # Punishment column headers — each gets its own colour
+        # so they're visually distinct from the death stats
+        punishment_headers = [
+            (10, f"Pushups ({PUSHUPS_PER_DEATH}/death)", self.PUSH_CLR),
+            (11, f"Pullups ({PULLUPS_PER_DEATH}/death)", self.PULL_CLR),
+            (12, f"Squats ({SQUATS_PER_DEATH}/death)",   self.SQUAT_CLR),
+        ]
+        for col, label, colour in punishment_headers:
+            c           = ws.cell(1, col)
             c.value     = label
-            c.fill      = hdr_fill
-            c.font      = hdr_font
+            c.fill      = PatternFill("solid", fgColor=self.HDR_BG)
+            c.font      = Font(bold=True, color=colour, size=10)
             c.alignment = Alignment(horizontal="center", vertical="center")
-            c.border    = hdr_border
+            c.border    = Border(bottom=Side(style="medium", color=colour))
+
 
     def _setup_summary_sheet(self, ws):
         """
@@ -239,7 +275,7 @@ class ExcelManager:
           - 'Deaths Log'!A:A / C:C  → left table (one row per death)
           - 'Deaths Log'!E:E / G:G  → right table (one row per session)
         """
-        dark = PatternFill("solid", fgColor="0D0D0D")
+        dark = PatternFill("solid", fgColor=self.DARK)
 
         ws.column_dimensions["A"].width = 26
         ws.column_dimensions["B"].width = 22
@@ -248,8 +284,8 @@ class ExcelManager:
         ws["A1"] = "SOULS DEATH TRACKER — SUMMARY"
         ws["A1"].font = Font(bold=True, size=13, color=self.ACCENT)
         ws.merge_cells("A1:B1")
-        ws["A1"].fill = dark
-        ws["B1"].fill = dark
+        for cell in [ws["A1"], ws["B1"]]:
+            cell.fill = dark
 
         # Column subheaders
         ws["A2"] = "Stat"
@@ -262,7 +298,7 @@ class ExcelManager:
 
         # Each tuple is (label, Excel formula).
         # The formulas are explained inline below:
-        stats = [
+        death_stats = [
             (
                 "Total Deaths",
                 # COUNTA counts non-empty cells in column A of Deaths Log.
@@ -313,7 +349,7 @@ class ExcelManager:
         # displays them as dates rather than raw serial numbers.
         timestamp_rows = {8, 9}   # "Overall First Death" and "Overall Last Death"
 
-        for i, (label, formula) in enumerate(stats, start=3):
+        for i, (label, formula) in enumerate(death_stats, start=3):
             ws[f"A{i}"] = label
             ws[f"A{i}"].font = Font(bold=True, color="AAAAAA", size=10)
             ws[f"A{i}"].fill = dark
@@ -330,6 +366,134 @@ class ExcelManager:
             # Show averages with one decimal place
             if "Avg" in label:
                 ws[f"B{i}"].number_format = "0.0"
+
+
+    # ── SECTION 2: Punishment tracker ────────────────────
+        # Row 10 is a blank spacer row between the two sections
+        ws["A10"].fill = dark
+        ws["B10"].fill = dark
+ 
+        # Row 11 — "PUNISHMENT" section header
+        # Spans both columns as a visual divider
+        ws["A11"] = "☠  PUNISHMENT TRACKER"
+        ws["A11"].font = Font(bold=True, size=12, color=self.ACCENT)
+        ws.merge_cells("A11:B11")
+        ws["A11"].fill = PatternFill("solid", fgColor="1A0A08")   # very dark red tint
+        ws["B11"].fill = PatternFill("solid", fgColor="1A0A08")
+ 
+        # ── Sub-header row for punishment columns ─────────────
+        # Row 12 will be the sub-header: blank | Pushups | Pullups | Squats
+        # But we only have 2 columns (A and B), so we label each row instead.
+ 
+        # We use a 3-column layout for the punishment section:
+        # A = label (e.g. "Pushups Owed") | B = value
+        # Each exercise gets its own row (so 3 rows per sub-section).
+ 
+        # ── Rows 12–14: Total Owed ────────────────────────────
+        # SUM the relevant column from the Deaths Log right table.
+        # Col J (10) = pushups, Col K (11) = pullups, Col L (12) = squats
+        ws["A12"] = "▸  TOTAL OWED"
+        ws["A12"].font = Font(bold=True, color="AAAAAA", size=9)
+        ws["A12"].fill = dark
+        ws["B12"].fill = dark
+ 
+        owed_rows = [
+            (13, "Pushups Owed",  f"=SUM('Deaths Log'!J:J)*{PUSHUPS_PER_DEATH}", self.PUSH_CLR),
+            # Note: col J already stores deaths×rate, but we use SUM(deaths col)*rate
+            # so that if rates change, you can update the constant and re-run.
+            # Actually simpler: just SUM the pre-calculated punishment col directly.
+        ]
+ 
+        # Cleaner approach: just SUM the pre-calculated columns from the right table
+        # Col J holds pushups owed per session, K = pullups, L = squats.
+        # SUM of those columns = total owed across all sessions.
+        punishment_owed = [
+            (13, "Pushups Owed",  "=SUM('Deaths Log'!J2:J9999)", self.PUSH_CLR),
+            (14, "Pullups Owed",  "=SUM('Deaths Log'!K2:K9999)", self.PULL_CLR),
+            (15, "Squats Owed",   "=SUM('Deaths Log'!L2:L9999)", self.SQUAT_CLR),
+        ]
+        for row, label, formula, colour in punishment_owed:
+            ws[f"A{row}"] = label
+            ws[f"A{row}"].font = Font(bold=True, color=colour, size=10)
+            ws[f"A{row}"].fill = dark
+            ws[f"B{row}"] = formula
+            ws[f"B{row}"].font      = Font(bold=True, color=colour, size=11)
+            ws[f"B{row}"].fill      = dark
+            ws[f"B{row}"].alignment = Alignment(horizontal="center")
+            ws[f"B{row}"].number_format = "0"
+ 
+        # Spacer
+        ws["A16"].fill = dark
+        ws["B16"].fill = dark
+ 
+        # ── Rows 17–19: Completed (manual input) ──────────────
+        # These cells are intentionally left empty for you to fill in.
+        # A light border and slightly different background signals they're editable.
+        ws["A17"] = "▸  COMPLETED (type here)"
+        ws["A17"].font = Font(bold=True, color="AAAAAA", size=9)
+        ws["A17"].fill = dark
+        ws["B17"].fill = dark
+ 
+        input_fill   = PatternFill("solid", fgColor="0A1628")   # slightly lighter = editable
+        input_border = Border(
+            top=Side(style="thin", color="333333"),
+            bottom=Side(style="thin", color="333333"),
+            left=Side(style="thin", color="333333"),
+            right=Side(style="thin", color="333333"),
+        )
+        completed_rows = [
+            (18, "Pushups Done",  self.PUSH_CLR),
+            (19, "Pullups Done",  self.PULL_CLR),
+            (20, "Squats Done",   self.SQUAT_CLR),
+        ]
+        for row, label, colour in completed_rows:
+            ws[f"A{row}"] = label
+            ws[f"A{row}"].font = Font(bold=True, color=colour, size=10)
+            ws[f"A{row}"].fill = dark
+            # Leave B blank — user types here
+            ws[f"B{row}"].fill   = input_fill
+            ws[f"B{row}"].border = input_border
+            ws[f"B{row}"].font   = Font(bold=True, color=colour, size=11)
+            ws[f"B{row}"].alignment = Alignment(horizontal="center")
+            ws[f"B{row}"].number_format = "0"
+            # Seed with 0 so the Still Owed formula doesn't show an error
+            ws[f"B{row}"].value = 0
+ 
+        # Spacer
+        ws["A21"].fill = dark
+        ws["B21"].fill = dark
+ 
+        # ── Rows 22–24: Still Owed ────────────────────────────
+        # Formula: Total Owed − Completed.
+        # References the rows above by absolute cell address.
+        # If the result is negative (you did more than owed) we show 0.
+        ws["A22"] = "▸  STILL OWED"
+        ws["A22"].font = Font(bold=True, color="AAAAAA", size=9)
+        ws["A22"].fill = dark
+        ws["B22"].fill = dark
+ 
+        still_owed_rows = [
+            (23, "Pushups Left",  "=MAX(0,B13-B18)", self.PUSH_CLR),
+            (24, "Pullups Left",  "=MAX(0,B14-B19)", self.PULL_CLR),
+            (25, "Squats Left",   "=MAX(0,B15-B20)", self.SQUAT_CLR),
+        ]
+        for row, label, formula, colour in still_owed_rows:
+            ws[f"A{row}"] = label
+            ws[f"A{row}"].font = Font(bold=True, color=colour, size=10)
+            ws[f"A{row}"].fill = dark
+            ws[f"B{row}"] = formula
+            # Colour shifts to accent red if there are still reps owed — but we
+            # can't do conditional colour from Python (that's Excel's conditional
+            # formatting). We set a default colour; Excel CF can be added manually.
+            ws[f"B{row}"].font      = Font(bold=True, color=colour, size=14)
+            ws[f"B{row}"].fill      = dark
+            ws[f"B{row}"].alignment = Alignment(horizontal="center")
+            ws[f"B{row}"].number_format = "0"
+ 
+        # Fill remaining rows with dark background so the sheet looks clean
+        for row in range(26, 35):
+            ws[f"A{row}"].fill = dark
+            ws[f"B{row}"].fill = dark
 
 
     # ─────────────────────────────────────────────────────────
@@ -463,6 +627,19 @@ class ExcelManager:
         ws.cell(row, RIGHT_COLS["start"]).number_format = TS_FMT
         ws.cell(row, RIGHT_COLS["end"]).number_format   = TS_FMT
 
+        # Punishment columns — coloured text, aligned, same zebra stripe
+        punishment_styles = [
+            (RIGHT_COLS["pushups"], self.PUSH_CLR),
+            (RIGHT_COLS["pullups"], self.PULL_CLR),
+            (RIGHT_COLS["squats"],  self.SQUAT_CLR),
+        ]
+        for col, colour in punishment_styles:
+            c           = ws.cell(row, col)
+            c.font      = Font(bold=True, color=colour, size=10)
+            c.alignment = Alignment(horizontal="center", vertical="center")
+            if alt:
+                c.fill = alt
+
 
     # ─────────────────────────────────────────────────────────
     #  HELPER: ROW WRITERS
@@ -486,6 +663,12 @@ class ExcelManager:
         ws.cell(row, RIGHT_COLS["deaths"]).value  = 1    # first death in this session
         ws.cell(row, RIGHT_COLS["start"]).value   = ts   # session started here
         ws.cell(row, RIGHT_COLS["end"]).value     = ts   # will be updated on future deaths
+
+        # 1 death × rate = initial punishment for this session
+        ws.cell(row, RIGHT_COLS["pushups"]).value = 1 * PUSHUPS_PER_DEATH
+        ws.cell(row, RIGHT_COLS["pullups"]).value = 1 * PULLUPS_PER_DEATH
+        ws.cell(row, RIGHT_COLS["squats"]).value  = 1 * SQUATS_PER_DEATH
+
         self._style_right(ws, row)
 
     def _update_right_row(self, ws, row, ts):
@@ -496,8 +679,19 @@ class ExcelManager:
         """
         deaths_cell = ws.cell(row, RIGHT_COLS["deaths"])
         # Guard against None just in case the cell is empty for some reason
-        deaths_cell.value = (deaths_cell.value or 0) + 1
+        new_deaths = (deaths_cell.value or 0) + 1
+        deaths_cell.value = new_deaths
         ws.cell(row, RIGHT_COLS["end"]).value = ts   # latest death = new end time
+
+         # Update end time to this death's timestamp
+        ws.cell(row, RIGHT_COLS["end"]).value = ts
+ 
+        # Recalculate punishment: new death count × rate
+        # This is safer than incrementing because it can't drift out of sync
+        ws.cell(row, RIGHT_COLS["pushups"]).value = new_deaths * PUSHUPS_PER_DEATH
+        ws.cell(row, RIGHT_COLS["pullups"]).value = new_deaths * PULLUPS_PER_DEATH
+        ws.cell(row, RIGHT_COLS["squats"]).value  = new_deaths * SQUATS_PER_DEATH
+
         self._style_right(ws, row)   # re-apply style (needed when updating existing cells)
 
 
@@ -619,7 +813,7 @@ class ScreenshotDetector:
             return False   # caller handles the error message
 
         try:
-            import cv2, numpy, mss  # noqa — just checking they're importable
+            import cv2, numpy, dxcam  # noqa — just checking they're importable
         except ImportError:
             return False   # caller will show "install these packages" message
 
@@ -647,7 +841,7 @@ class ScreenshotDetector:
         """
         import cv2
         import numpy as np
-        import mss
+        import dxcam
 
         # Load the template once at startup rather than every frame
         # IMREAD_GRAYSCALE loads it as greyscale directly, matching our screenshot conversion
@@ -656,7 +850,9 @@ class ScreenshotDetector:
             return   # file exists but couldn't be decoded as an image
 
         last_hit = 0       # unix timestamp of last confirmed death
-        sct = mss.mss()    # mss screen capture context
+        # dxcam captures DirectX fullscreen buffers directly - works where mss fails
+        camera = dxcam.create(output_color="BGR")
+        camera.start(target_fps=10)  # 10fps is plenty to capture the death
 
         while self.running:
             now = time.time()
@@ -670,11 +866,12 @@ class ScreenshotDetector:
 
             # ── Capture screenshot ──────────────────────────
             try:
-                # monitors[1] is the primary monitor. monitors[0] is a
-                # virtual "all monitors combined" bounding box.
-                screen = np.array(sct.grab(sct.monitors[1]))
+                frame = camera.get_latest_frame()
+                if frame is None:
+                    time.sleep(0.1)
+                    continue
+                screen = frame
             except Exception:
-                # mss can occasionally fail (e.g. if the monitor config changes)
                 time.sleep(1)
                 continue
 
@@ -700,6 +897,9 @@ class ScreenshotDetector:
             # 0.3 s = ~3 checks per second, which is plenty for a death screen
             # that usually stays up for 3-5 seconds.
             time.sleep(0.3)
+
+        # clean up
+        camera.stop()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -910,8 +1110,8 @@ class DeathTrackerApp:
         Note: these hotkeys only fire when the tracker window is focused.
         For global hotkeys (work in-game) you'd need the `keyboard` library.
         """
-        self.root.bind("<F9>",  lambda _: self.record_death())
-        self.root.bind("<F10>", lambda _: self.undo_death())
+        keyboard.add_bind("<F9>",  lambda _: self.record_death())
+        keyboard.add_bind("<F10>", lambda _: self.undo_death())
 
 
     # ─────────────────────────────────────────────────────────
